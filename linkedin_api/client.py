@@ -90,9 +90,12 @@ class Client(object):
         cookies.set("li_at", token, domain=".linkedin.com")
         
         # Generar un JSESSIONID si no existe
-        if "JSESSIONID" not in cookies:
-            jsessionid = str(uuid.uuid4())
-            cookies.set("JSESSIONID", jsessionid, domain=".www.linkedin.com")
+        jsessionid = str(uuid.uuid4())
+        cookies.set("JSESSIONID", jsessionid, domain=".www.linkedin.com")
+        
+        # Agregar más cookies que pueden ser necesarias
+        cookies.set("li_mc", "", domain=".linkedin.com")
+        cookies.set("liap", "true", domain=".linkedin.com")
         
         self._set_session_cookies(cookies)
         self.session.headers["csrf-token"] = self.session.cookies["JSESSIONID"]
@@ -118,14 +121,20 @@ class Client(object):
     def _fetch_metadata(self):
         """
         Get metadata about the "instance" of the LinkedIn application for the signed in user.
-
         Store this data in self.metadata
         """
-        res = self.session.get(
-            f"{Client.LINKEDIN_BASE_URL}",
-            headers=Client.AUTH_REQUEST_HEADERS,
-            proxies=self.proxies,
-        )
+        try:
+            res = self.session.get(
+                f"{Client.LINKEDIN_BASE_URL}",
+                headers=Client.AUTH_REQUEST_HEADERS,
+                proxies=self.proxies,
+                allow_redirects=True,
+                timeout=30
+            )
+            res.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Error fetching metadata: {str(e)}")
+            return
 
         soup = BeautifulSoup(res.text, "lxml")
 
