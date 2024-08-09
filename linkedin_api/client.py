@@ -83,6 +83,14 @@ class Client(object):
         self.session.headers["csrf-token"] = self.session.cookies["JSESSIONID"].strip(
             '"'
         )
+    def set_session_token(self, token):
+        """
+        Set the session token directly without username/password authentication.
+        """
+        cookies = RequestsCookieJar()
+        cookies.set("li_at", token)
+        self._set_session_cookies(cookies)
+        self._fetch_metadata()
 
     @property
     def cookies(self):
