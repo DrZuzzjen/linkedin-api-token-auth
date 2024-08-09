@@ -71,13 +71,7 @@ class Linkedin(object):
         self.logger = logger
 
         if authenticate:
-            cookies = self.client.cookies
-            if cookies:
-                # If the cookies are expired, the API won't work anymore since
-                # `username` and `password` are not used at all in this case.
-                self.client._set_session_cookies(cookies)
-            else:
-                self.client.authenticate("", "password")
+            self.client.set_session_token(token)
 
     def _fetch(self, uri: str, evade=default_evade, base_request=False, **kwargs):
         """GET request to Linkedin API"""
