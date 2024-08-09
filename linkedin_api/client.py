@@ -3,6 +3,7 @@ import logging
 from linkedin_api.cookie_repository import CookieRepository
 from bs4 import BeautifulSoup, Tag
 from requests.cookies import RequestsCookieJar
+import uuid
 import json
 
 logger = logging.getLogger(__name__)
@@ -79,17 +80,22 @@ class Client(object):
         """
         Set cookies of the current session and save them to a file named as the username.
         """
-        self.session.cookies = cookies
-        self.session.headers["csrf-token"] = self.session.cookies["JSESSIONID"].strip(
-            '"'
-        )
-        
+        self.session.cookies.update(cookies)
+        if "JSESSIONID" in self.session.cookies:
+            self.session.headers["csrf-token"] = self.session.cookies["JSESSIONID"]
+
     def set_session_token(self, token):
         """Set the session token for authentication."""
         cookies = RequestsCookieJar()
-        cookies.set("li_at", token)
+        cookies.set("li_at", token, domain=".linkedin.com")
+        
+        # Generar un JSESSIONID si no existe
+        if "JSESSIONID" not in cookies:
+            jsessionid = str(uuid.uuid4())
+            cookies.set("JSESSIONID", jsessionid, domain=".www.linkedin.com")
+        
         self._set_session_cookies(cookies)
-        self.session.headers["csrf-token"] = self.session.cookies["JSESSIONID"].strip('"')
+        self.session.headers["csrf-token"] = self.session.cookies["JSESSIONID"]
         self._fetch_metadata()
 
     @property
@@ -115,9 +121,8 @@ class Client(object):
 
         Store this data in self.metadata
         """
-        res = requests.get(
+        res = self.session.get(
             f"{Client.LINKEDIN_BASE_URL}",
-            cookies=self.session.cookies,
             headers=Client.AUTH_REQUEST_HEADERS,
             proxies=self.proxies,
         )
